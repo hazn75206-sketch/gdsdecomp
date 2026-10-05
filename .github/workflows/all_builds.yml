@@ -113,7 +113,7 @@ jobs:
             target: template_release
             rust-arch: x86_64-linux-android
             alt-rust-arch: aarch64-linux-android
-            sconsflags: production=yes debug_symbols=no optimize=size use_lto=yes generate_android_binaries=yes
+            sconsflags: -j4 production=yes debug_symbols=no optimize=size use_lto=yes generate_android_binaries=yes
             bin: ./bin/godot.linuxbsd.editor.x86_64
 
           - name: "🍎 macOS Editor"
@@ -272,7 +272,7 @@ jobs:
         id: compile-template
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: arch=x86_64 ${{ env.SCONSFLAGS }} ${{ env.SCONSFLAGS_TEMPLATE }} ${{ matrix.sconsflags }}
+          scons-flags: -j4 arch=x86_64 ${{ env.SCONSFLAGS }} ${{ env.SCONSFLAGS_TEMPLATE }} ${{ matrix.sconsflags }}
           platform: ${{ matrix.platform }}
           target: ${{ matrix.target }}
 
@@ -280,7 +280,15 @@ jobs:
         uses: ./.github/actions/godot-build
         if: (matrix.platform == 'macos' || matrix.platform == 'android') && (matrix.target == 'template_release' || matrix.target == 'template_debug')
         with:
-          scons-flags: arch=arm64 ${{ env.SCONSFLAGS }} ${{ env.SCONSFLAGS_TEMPLATE }} ${{ matrix.sconsflags }} generate_bundle=yes
+          scons-flags: -j4 arch=arm64 ${{ env.SCONSFLAGS }} ${{ env.SCONSFLAGS_TEMPLATE }} ${{ matrix.sconsflags }} generate_bundle=yes
+          platform: ${{ matrix.platform }}
+          target: ${{ matrix.target }}
+
+      - name: Compile godot export template for arm32 (Android v7a)
+        uses: ./.github/actions/godot-build
+        if: matrix.platform == 'android' && (matrix.target == 'template_release' || matrix.target == 'template_debug')
+        with:
+          scons-flags: -j4 arch=arm32 ${{ env.SCONSFLAGS }} ${{ env.SCONSFLAGS_TEMPLATE }} ${{ matrix.sconsflags }}
           platform: ${{ matrix.platform }}
           target: ${{ matrix.target }}
 
