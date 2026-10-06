@@ -1,0 +1,71 @@
+name: Linux ARM64 Headless
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/linux-arm64.yml
+
+env:
+  GODOT_REPOSITORY: nikitalita/godot
+  GODOT_MAIN_SYNC_REF: gdre-wb-f964fa714f5
+  SCONSFLAGS: verbose=yes warnings=all werror=no module_text_server_fb_enabled=yes minizip=yes deprecated=yes angle=yes accesskit=no
+  SCONSFLAGS_TEMPLATE: disable_path_overrides=no no_editor_splash=yes module_camera_enabled=no module_mobile_vr_enabled=no module_upnp_enabled=no module_websocket_enabled=no module_csg_enabled=yes module_gridmap_enabled=yes use_static_cpp=yes builtin_freetype=yes builtin_libpng=yes builtin_zlib=yes builtin_libwebp=yes builtin_libvorbis=yes builtin_libogg=yes disable_3d=no
+
+concurrency:
+  group: linux-arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    name: Linux Editor ARM64 (headless)
+    steps:
+      - name: checkout-godot
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GODOT_REPOSITORY }}
+          ref: ${{ env.GODOT_MAIN_SYNC_REF }}
+      - name: checkout-gdsdecomp
+        uses: actions/checkout@v4
+        with:
+          path: modules/gdsdecomp
+          fetch-depth: 0
+      - name: copy actions
+        shell: bash
+        run: cp -R modules/gdsdecomp/.github/actions/* .github/actions/
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: linux-editor-arm64
+        continue-on-error: true
+      - name: Install Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev yasm clang-format libwayland-bin patchelf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      - name: Setup python and scons
+        uses: ./.github/actions/godot-deps
+      - name: Rust targets
+        shell: sh
+        run: |
+          rustup target add x86_64-unknown-linux-gnu
+          rustup target add aarch64-unknown-linux-gnu
+      - name: setup-dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Compile Linux editor ARM64
+        uses: ./.github/actions/godot-build
+        with:
+          scons-flags: -j4 arch=arm64 ${{ env.SCONSFLAGS }} debug_symbols=no tests=yes
+          platform: linux
+          target: editor
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: linux-editor-arm64
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GDRE_tools-editor-linux-arm64
+          path: ${{ github.workspace }}/bin/*
+          retention-days: 90
