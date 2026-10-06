@@ -64,7 +64,7 @@ jobs:
       - name: Compile Linux editor ARM64
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: -j4 arch=arm64 ${{ env.SCONSFLAGS }} debug_symbols=no tests=yes
+          scons-flags: -j4 arch=arm64 ${{ env.SCONSFLAGS }} debug_symbols=no tests=yes CXX=aarch64-linux-gnu-g++ CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib
           platform: linux
           target: editor
       - name: Save Godot build cache
