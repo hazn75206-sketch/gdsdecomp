@@ -1,0 +1,68 @@
+name: Recover Official (linux+windows)
+on:
+  workflow_dispatch:
+
+jobs:
+  recover:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            asset: GDRE_tools-v2.7.0-linux.zip
+            tag: linux
+          - os: windows-latest
+            asset: GDRE_tools-v2.7.0-windows.zip
+            tag: windows
+    runs-on: ${{ matrix.os }}
+    name: Recover on ${{ matrix.tag }} (official binary)
+    steps:
+      - name: Checkout standalone project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Checkout game PCK
+        uses: actions/checkout@v4
+        with:
+          ref: game-hypemanic
+          path: game
+          fetch-depth: 1
+
+      - name: Download official GDRE Tools
+        shell: bash
+        run: |
+          gh release download v2.7.0 -R GDRETools/gdsdecomp -p "${{ matrix.asset }}" -O official.zip
+          mkdir -p gdre-bin
+          unzip -o official.zip -d gdre-bin/
+          ls -lh gdre-bin/
+
+      - name: Full recovery (live log)
+        shell: bash
+        run: |
+          mkdir -p recovered/
+          if [ "${{ matrix.tag }}" = "windows" ]; then BIN=$(ls gdre-bin/*.exe | head -1); else BIN=$(ls gdre-bin/godot* | grep -v ".so" | head -1); chmod +x "$BIN" gdre-bin/*.so 2>/dev/null || true; fi
+          echo "BIN=$BIN"
+          stdbuf -o0 -e0 "$BIN" --headless --path=standalone --recover=game/HypemanicHypermania2.pck --output=recovered/ 2>&1 | tee recovery-${{ matrix.tag }}.log
+          echo "---OUTPUT---"
+          du -sh recovered/
+          find recovered/ -type f | wc -l
+
+      - name: Zip result
+        shell: bash
+        run: |
+          zip -qr hypemanic-${{ matrix.tag }}.zip recovered/ recovery-${{ matrix.tag }}.log
+          ls -lh hypemanic-${{ matrix.tag }}.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hypemanic-${{ matrix.tag }}
+          path: hypemanic-${{ matrix.tag }}.zip
+          retention-days: 90
+
+      - name: Publish release (direct zip links)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: game-hypemanic-official
+          name: Hypemanic Recovered (official linux+windows)
+          files: hypemanic-${{ matrix.tag }}.zip
