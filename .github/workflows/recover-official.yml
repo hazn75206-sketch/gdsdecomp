@@ -31,6 +31,8 @@ jobs:
 
       - name: Download official GDRE Tools
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download v2.7.0 -R GDRETools/gdsdecomp -p "${{ matrix.asset }}" -O official.zip
           mkdir -p gdre-bin
@@ -41,9 +43,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p recovered/
-          if [ "${{ matrix.tag }}" = "windows" ]; then BIN=$(ls gdre-bin/*.exe | head -1); else BIN=$(ls gdre-bin/godot* | grep -v ".so" | head -1); chmod +x "$BIN" gdre-bin/*.so 2>/dev/null || true; fi
+          if [ "${{ matrix.tag }}" = "windows" ]; then BIN=$(ls gdre-bin/*.exe | head -1); STDBUF=""; else BIN=$(ls gdre-bin/ | grep -v '\.so$' | grep -v '\.pck$' | head -1); BIN="gdre-bin/$BIN"; chmod +x "$BIN"; STDBUF="stdbuf -o0 -e0"; fi
           echo "BIN=$BIN"
-          stdbuf -o0 -e0 "$BIN" --headless --path=standalone --recover=game/HypemanicHypermania2.pck --output=recovered/ 2>&1 | tee recovery-${{ matrix.tag }}.log
+          $STDBUF "$BIN" --headless --recover=game/HypemanicHypermania2.pck --output=recovered/ 2>&1 | tee recovery-${{ matrix.tag }}.log
           echo "---OUTPUT---"
           du -sh recovered/
           find recovered/ -type f | wc -l
