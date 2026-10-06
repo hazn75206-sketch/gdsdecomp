@@ -36,8 +36,12 @@ def get_godot_mono_decomp_libs(static_lib, platform: str, is_msvc: bool, libs):
 def get_dotnet_arch(env_arch):
     if env_arch == "arm64":
         return "arm64"
+    elif env_arch == "arm32":
+        return "arm"
     elif env_arch == "x86_64":
         return "x64"
+    elif env_arch == "x86_32":
+        return "x86"
     else:
         raise Exception(f"Unsupported architecture: {env_arch}")
 
@@ -45,8 +49,12 @@ def get_dotnet_arch(env_arch):
 def get_build_arch(dotnet_arch):
     if dotnet_arch == "arm64":
         return "arm64"
+    elif dotnet_arch == "arm":
+        return "arm32"
     elif dotnet_arch == "x64":
         return "x86_64"
+    elif dotnet_arch == "x86":
+        return "x86_32"
     else:
         raise Exception(f"Unsupported architecture: {dotnet_arch}")
 
@@ -63,7 +71,14 @@ def get_godot_mono_triplet(target_platform, target_arch):
         arch_part = "arm64" if target_arch == "arm64" else "x64"
     elif target_platform == "android":
         platform_part = "linux-bionic"
-        arch_part = "arm64" if target_arch == "arm64" else "x64"
+        if target_arch == "arm64":
+            arch_part = "arm64"
+        elif target_arch == "arm32":
+            arch_part = "arm"
+        elif target_arch == "x86_32":
+            arch_part = "x86"
+        else:
+            arch_part = "x64"
     elif target_platform == "web":
         platform_part = "browser"
         arch_part = "wasm"
