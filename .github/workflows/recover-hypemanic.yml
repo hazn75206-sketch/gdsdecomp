@@ -2,10 +2,6 @@ name: Recover Hypemanic (runner)
 on:
   workflow_dispatch:
 
-concurrency:
-  group: recover-hypemanic
-  cancel-in-progress: true
-
 jobs:
   recover:
     runs-on: ubuntu-22.04
@@ -43,7 +39,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p recovered
-          ./bin/godot.linuxbsd.editor.x86_64 --headless --path=standalone --recover=game/HypemanicHypermania2.pck --output=recovered/ 2>&1 | tail -30
+          stdbuf -o0 -e0 ./bin/godot.linuxbsd.editor.x86_64 --headless --path=standalone --recover=game/HypemanicHypermania2.pck --output=recovered/ 2>&1 | tee recovery.log
           echo "---OUTPUT---"
           du -sh recovered/
           find recovered/ -type f | head -20
@@ -58,7 +54,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: hypemanic-recovered
-          path: hypemanic-recovered.zip
+          path: |
+            hypemanic-recovered.zip
+            recovery.log
           retention-days: 90
 
       - name: Publish release (direct zip link)
@@ -66,4 +64,6 @@ jobs:
         with:
           tag_name: game-hypemanic-recovered
           name: HypemanicHypermania2 Recovered
-          files: hypemanic-recovered.zip
+          files: |
+            hypemanic-recovered.zip
+            recovery.log
