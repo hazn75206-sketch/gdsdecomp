@@ -91,6 +91,10 @@ jobs:
         if: matrix.alt-rust-arch != 'none'
         shell: sh
         run: rustup target add ${{ matrix.alt-rust-arch }}
+      - name: Rust Add Android armv7 target (v7a)
+        if: matrix.platform == 'android'
+        shell: sh
+        run: rustup target add armv7-linux-androideabi
       - name: setup-dotnet
         uses: actions/setup-dotnet@v4
         with:
