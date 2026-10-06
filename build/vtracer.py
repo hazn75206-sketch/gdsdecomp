@@ -45,6 +45,8 @@ def get_cargo_target(build_env):
     if build_env["platform"] == "ios":
         return f"{arch_part}-apple-ios"
     if build_env["platform"] == "android":
+        if arch_part == "armv7":
+            return "armv7-linux-androideabi"
         return f"{arch_part}-linux-android"
     raise Exception(f"Unsupported platform: {build_env['platform']}")
 
@@ -57,7 +59,7 @@ def write_cargo_config_toml_file(build_env, module_dir, vtracer_prefix):
     ar = llvm_prebuild_path + "/llvm-ar" + ar_suffix
     min_sdk_ver = build_env["ndk_platform"].split("-")[1]
     arm64_linker = llvm_prebuild_path + f"/aarch64-linux-android{min_sdk_ver}-clang{linker_suffix}"
-    arm_linker = llvm_prebuild_path + f"/arm7a-linux-android{min_sdk_ver}-clang{linker_suffix}"
+    arm_linker = llvm_prebuild_path + f"/armv7a-linux-androideabi{min_sdk_ver}-clang{linker_suffix}"
     x86_linker = llvm_prebuild_path + f"/i686-linux-android{min_sdk_ver}-clang{linker_suffix}"
     x86_64_linker = llvm_prebuild_path + f"/x86_64-linux-android{min_sdk_ver}-clang{linker_suffix}"
 
