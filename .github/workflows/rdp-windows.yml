@@ -25,9 +25,8 @@ jobs:
           mkdir C:\tools -Force | Out-Null
           # GDRE Tools resmi (punya fitur recovery + AssetRipper-like export)
           gh release download v2.7.0 -R GDRETools/gdsdecomp -p "GDRE_tools-v2.7.0-windows.zip" -O C:\tools\gdre.zip
-          # AssetRipper (rilis terbaru, pola win-x64)
-          $ar = gh release download -R ds5678/AssetRipper -p "*win-x64*.zip" -O C:\tools\assetripper.zip --clobber 2>&1
-          if ($LASTEXITCODE -ne 0) { gh release download -R ds5678/AssetRipper -p "*.zip" -O C:\tools\assetripper.zip --clobber }
+          # AssetRipper (rilis terbaru, win x64)
+          gh release download -R ds5678/AssetRipper -p "AssetRipper_win_x64.zip" -O C:\tools\assetripper.zip --clobber
           # Godot terbaru (stabil)
           gh release download 4.7.2-stable -R godotengine/godot -p "Godot_v4.7.2-stable_win64.exe.zip" -O C:\tools\godot.zip
           # AssetStudio (Perfare, GUI)
