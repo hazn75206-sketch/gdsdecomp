@@ -1,0 +1,78 @@
+name: RDP Windows + Tools
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Lama RDP (maks 6 jam)"
+        default: "5"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download 4 aplikasi
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          mkdir C:\tools -Force | Out-Null
+          # GDRE Tools resmi (punya fitur recovery + AssetRipper-like export)
+          gh release download v2.7.0 -R GDRETools/gdsdecomp -p "GDRE_tools-v2.7.0-windows.zip" -O C:\tools\gdre.zip
+          # AssetRipper (rilis terbaru, pola win-x64)
+          $ar = gh release download -R ds5678/AssetRipper -p "*win-x64*.zip" -O C:\tools\assetripper.zip --clobber 2>&1
+          if ($LASTEXITCODE -ne 0) { gh release download -R ds5678/AssetRipper -p "*.zip" -O C:\tools\assetripper.zip --clobber }
+          # Godot terbaru (stabil)
+          gh release download 4.7.2-stable -R godotengine/godot -p "Godot_v4.7.2-stable_win64.exe.zip" -O C:\tools\godot.zip
+          # AssetStudio (Perfare, GUI)
+          gh release download -R Perfare/AssetStudio -p "*net472*.zip" -O C:\tools\assetstudio.zip --clobber
+          Expand-Archive C:\tools\gdre.zip C:\tools\gdre\ -Force
+          Expand-Archive C:\tools\assetripper.zip C:\tools\assetripper\ -Force
+          Expand-Archive C:\tools\godot.zip C:\tools\godot\ -Force
+          Expand-Archive C:\tools\assetstudio.zip C:\tools\assetstudio\ -Force
+          # Shortcut Desktop
+          $desk = "C:\Users\runneradmin\Desktop"
+          $W = New-Object -ComObject WScript.Shell
+          @{"GDRE Tools"=(Get-ChildItem C:\tools\gdre\*.exe | Select-Object -First 1).FullName;
+            "AssetRipper"=(Get-ChildItem C:\tools\assetripper\*.exe | Select-Object -First 1).FullName;
+            "Godot"=(Get-ChildItem C:\tools\godot\*.exe | Select-Object -First 1).FullName;
+            "AssetStudio"=(Get-ChildItem C:\tools\assetstudio\*.exe -Recurse | Select-Object -First 1).FullName} `
+          | ForEach-Object { $_.GetEnumerator() } | ForEach-Object {
+            $s = $W.CreateShortcut("$desk\$($_.Key).lnk"); $s.TargetPath = $_.Value; $s.Save()
+          }
+          Get-ChildItem C:\tools\ -Directory | Select-Object Name
+
+      - name: Aktifkan RDP + user
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Set-ItemProperty "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          $pass = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
+          New-LocalUser "${{ secrets.RDP_USER }}" -Password $pass -FullName "RDP" -Description "RDP sementara" -ErrorAction SilentlyContinue
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "${{ secrets.RDP_USER }}" -ErrorAction SilentlyContinue
+          Add-LocalGroupMember -Group "Administrators" -Member "${{ secrets.RDP_USER }}" -ErrorAction SilentlyContinue
+          echo "RDP aktif, user: ${{ secrets.RDP_USER }}"
+
+      - name: Tailscale up
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          choco install tailscale -y --no-progress
+          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey "${{ secrets.TAILSCALE_AUTHKEY }}" --hostname ghwin --accept-routes
+          & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+
+      - name: Tahan hidup
+        shell: powershell
+        run: |
+          $mins = [int]"${{ inputs.hours }}" * 60
+          if ($mins -gt 340) { $mins = 340 }
+          echo "RDP hidup $mins menit. Username: ${{ secrets.RDP_USER }} | IP Tailscale di atas."
+          echo "Simpan file penting ke Release/di luar runner sebelum waktu habis."
+          for ($i = 0; $i -lt $mins; $i++) { Start-Sleep 60; if ($i % 30 -eq 0) { echo "sisa ±$($mins - $i) mnt" } }
