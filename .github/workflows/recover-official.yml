@@ -1,4 +1,4 @@
-name: Recover Official (linux+windows)
+name: Recover Official (windows)
 on:
   workflow_dispatch:
 
@@ -11,9 +11,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            asset: GDRE_tools-v2.7.0-linux.zip
-            tag: linux
           - os: windows-latest
             asset: GDRE_tools-v2.7.0-windows.zip
             tag: windows
@@ -69,5 +66,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: game-hypemanic-official
-          name: Hypemanic Recovered (official linux+windows)
+          name: Hypemanic Recovered (official windows)
           files: hypemanic-${{ matrix.tag }}.zip
