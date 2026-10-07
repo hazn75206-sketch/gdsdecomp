@@ -10,6 +10,11 @@ on:
         description: "Encryption key 64-char hex (opsional)"
         required: false
         type: string
+      pck_parts:
+        description: "Jumlah bagian file (web isi otomatis)"
+        default: "1"
+        required: false
+        type: string
       inbox_branch:
         description: "Branch inbox tempat file upload"
         default: "pck-inbox"
@@ -68,6 +73,16 @@ jobs:
         run: |
           set -e
           ASSET='${{ inputs.pck_asset }}'
+          PARTS='${{ inputs.pck_parts }}'
+          if [ "$PARTS" != "1" ]; then
+            COUNT=$(ls inbox/"$ASSET".part* 2>/dev/null | wc -l)
+            if [ "$COUNT" != "$PARTS" ]; then
+              echo "Bagian tidak lengkap: $COUNT dari $PARTS. Upload ulang dari web."
+              exit 1
+            fi
+            cat inbox/"$ASSET".part* > "inbox/$ASSET"
+            echo "Disambung dari $PARTS bagian."
+          fi
           EXT=$(echo "${ASSET##*.}" | tr '[:upper:]' '[:lower:]')
           TARGET=""
           if [ "$EXT" = "zip" ]; then
