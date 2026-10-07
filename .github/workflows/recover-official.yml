@@ -3,15 +3,15 @@ on:
   workflow_dispatch:
     inputs:
       pck_asset:
-        description: "Nama file di release inbox (pck/exe/apk/zip)"
+        description: "Nama file di branch inbox (pck/exe/apk/zip)"
         required: true
         type: string
       pck_key:
         description: "Encryption key 64-char hex (opsional)"
         required: false
         type: string
-      inbox_tag:
-        description: "Tag release inbox"
+      inbox_branch:
+        description: "Branch inbox tempat file upload"
         default: "pck-inbox"
         required: false
         type: string
@@ -40,13 +40,12 @@ jobs:
           7z x official.zip -ogdre-bin/ > /dev/null
           echo "BIN=$(ls gdre-bin/*.exe | head -1)"
 
-      - name: Download input dari inbox
-        shell: bash
-        run: |
-          set -e
-          mkdir -p inbox
-          gh release download "${{ inputs.inbox_tag }}" --repo "$GITHUB_REPOSITORY" --pattern "${{ inputs.pck_asset }}" --dir inbox
-          ls -lh inbox/
+      - name: Ambil file dari inbox
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.inbox_branch }}
+          path: inbox
+          fetch-depth: 1
 
       - name: Validasi key (jika diisi)
         shell: bash
