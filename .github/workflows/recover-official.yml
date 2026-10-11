@@ -3,8 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       pck_asset:
-        description: "Nama file di branch inbox (pck/exe/apk/zip)"
-        required: true
+        description: "Nama file (pck/exe/apk/zip). Mode upload: nama di branch inbox. Mode link: nama file hasil download."
+        required: false
+        type: string
+      pck_url:
+        description: "Link download langsung http(s) (opsional). Kalau diisi, runner download sendiri tanpa upload dari HP."
+        required: false
         type: string
       pck_key:
         description: "Encryption key 64-char hex (opsional)"
@@ -46,11 +50,37 @@ jobs:
           echo "BIN=$(ls gdre-bin/*.exe | head -1)"
 
       - name: Ambil file dari inbox
+        if: inputs.pck_url == ''
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.inbox_branch }}
           path: inbox
           fetch-depth: 1
+
+      - name: Download dari link (mode tanpa upload)
+        if: inputs.pck_url != ''
+        shell: bash
+        run: |
+          set -e
+          URL='${{ inputs.pck_url }}'
+          ASSET='${{ inputs.pck_asset }}'
+          if [[ "$URL" != https://* && "$URL" != http://* ]]; then
+            echo "URL harus diawali http:// atau https:// (link langsung, bukan halaman web)."
+            exit 1
+          fi
+          if [ -z "$ASSET" ]; then
+            echo "Nama file (pck_asset) wajib diisi untuk mode link."
+            exit 1
+          fi
+          EXT=$(echo "${ASSET##*.}" | tr '[:upper:]' '[:lower:]')
+          case "$EXT" in
+            pck|exe|apk|zip) ;;
+            *) echo "Ekstensi tidak didukung: $EXT (pakai pck/exe/apk/zip)."; exit 1 ;;
+          esac
+          mkdir -p inbox
+          echo "Download langsung dari URL (tanpa lewat HP)..."
+          curl -L --fail --retry 2 --max-time 3600 -o "inbox/$ASSET" "$URL"
+          ls -lh "inbox/$ASSET"
 
       - name: Validasi key (jika diisi)
         shell: bash
@@ -74,6 +104,10 @@ jobs:
           set -e
           ASSET='${{ inputs.pck_asset }}'
           PARTS='${{ inputs.pck_parts }}'
+          if [ -z "$ASSET" ]; then
+            echo "pck_asset kosong. Isi nama file (wajib untuk mode upload maupun link)."
+            exit 1
+          fi
           if [ "$PARTS" != "1" ]; then
             COUNT=$(ls inbox/"$ASSET".part* 2>/dev/null | wc -l)
             if [ "$COUNT" != "$PARTS" ]; then
